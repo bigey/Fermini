@@ -1,0 +1,66 @@
+<?php
+
+require_once("../fonctions.php");
+require_once("../constantes.php");
+
+session_start();
+
+// Verifie si l'autorisation est ok sinon on redirige sur la page d'authentification
+if (!$_SESSION['auth']==1) {
+
+	header("Location: ../Identification/identification.php");
+	exit;
+
+} elseif ( isset($_SESSION['fermentation']['idFermentation']) ) {  // On arrive sur la page donc il doit exister un id de fermentation
+
+	$id		= $_SESSION['fermentation']['idFermentation'];
+	$filename	= "fermentation_$id.tab";
+
+
+	// Ouvre la connexion
+	$connection = mysql_connect(SERVEUR, USER, PASS) or die ("Unable to connect database!");
+
+	// Selectionne la base
+	mysql_select_db(BASE) or die ("Unable to select database!");
+
+	// Construit les requetes
+	$query = 	"
+			SELECT Fermentation_idFermentation, idAcquisition, dateAcquisition, temps, poids, volumeRestant, mCO2, vCO2, Prelevement_idPrelevement
+			FROM Acquisition
+			WHERE Fermentation_idFermentation='$id' ORDER BY dateAcquisition
+			";
+
+	// Execute la requete
+	$results = mysql_query($query) or die ("Error in query: " . mysql_error());
+	$table = mysql_fetch_all($results);
+
+	// Ferme la connexion
+	mysql_free_result($results);
+	mysql_close($connection);
+
+	$content = "idFermentation\tidAcquisition\tdate\ttemps (h)\tpoids (g)\tvolume (L)\tCO2 (g/L)\tvitesse (g/L/h)\tidPrelevement\r\n";
+
+	if ( !empty($table) ) {
+
+		foreach ($table as $row) {
+
+			foreach($row as $value) {
+
+				$value = !isset($value) ? 'n/a' : $value;
+				$content .= "$value\t";
+			}
+
+			$content .= "\r\n";
+		}
+	}
+}
+
+$f = fopen("/tmp/$filename",'w') or die;
+fwrite($f, $content) or die;
+fclose($f) or die;
+
+header("Content-Disposition: attachment; filename=$filename");
+header('Content-Type: text/plain');
+readfile("/tmp/$filename");
+
+?>

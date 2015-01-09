@@ -1,0 +1,229 @@
+<?php
+
+require_once("../fonctions.php");
+require_once("../constantes.php");
+
+session_start();
+
+// verifie si l'autorisation est ok sinon on redirige sur la page d'authentification
+if (!$_SESSION['auth']==1) {
+
+	header("Location: ../Identification/identification.php");
+	exit;
+
+// Si un bouton est appuyé et on traite l'évènememnt
+} elseif ( !empty($_POST) ) {
+
+	if ( isset($_POST['retour']) ) {
+		unset($_SESSION['message']);
+		unset($_SESSION['fermentation']);
+		unset($_SESSION['acquisition']);
+		header("Location: listeferm.php");
+		exit;
+	}
+
+	if ( isset($_SESSION['fermentation']['idFermentation']) ) {
+
+		if ( isset($_POST['acquisition']) ) { // Demande d'acquisition
+			unset($_SESSION['message']);
+			header("Location: ../Acquisition/acquisition.php");
+			exit;
+
+		} elseif ( isset($_POST['afficher']) ) { // On souhaite afficher toutes les valeurs acquises
+			unset($_SESSION['message']);
+			header("Location: affiche_data.php");
+			exit;
+
+		} elseif ( isset($_POST['cloturer']) ) { // On souhaite metre fin à la fermentation en cours
+			unset($_SESSION['message']);
+			header("Location: ../Cloturer/cloturer.php");
+			exit;
+
+		} elseif ( isset($_POST['exporter']) ) { // Exporter
+			unset($_SESSION['message']);
+			header("Location: ../Cloturer/exporter.php");
+			exit;
+		}
+
+	} else {
+		header("Location: {$_SERVER['PHP_SELF']}");
+		exit;
+	}
+
+// Point d'arrivée de la page: il faut un id de fermentation pour afficher les détails
+} elseif ( isset($_SESSION['fermentation']['idFermentation']) ) {
+
+	$id = $_SESSION['fermentation']['idFermentation'];
+
+	// Ouvre la connexion
+	$connection = mysql_connect(SERVEUR, USER, PASS) or die ("Unable to connect database!");
+
+	// Selectionne la base
+	mysql_select_db(BASE) or die ("Unable to select database!");
+
+	// Construit les requetes
+	$query = 	"
+				SELECT F.idFermentation, F.dateDeclaration, F.commentaire, F.statut,
+				S.idSouche, S.numMTF, S.nomScientifique, S.nomLabo, S.description,
+				C.idConditionCulture, C.milieu, C.temperature, C.volume, C.typeFermenteur, C.oxygene,
+				P.idPoste, P.agitateur, P.vitesse, P.ligne, P.colonne, P.balance
+				FROM Souche AS S , ConditionCulture AS C, Poste AS P, Fermentation AS F
+				WHERE F.idFermentation=$id AND Souche_idSouche=idSouche AND ConditionCulture_idConditionCulture=idConditionCulture
+				AND Poste_idPoste=idPoste
+			";
+
+
+	// Execute la requete
+	$results = mysql_query($query) or die ("Error in query: " . mysql_error());
+	$table = mysql_fetch_assoc($results);
+
+	$statut = ($table['statut']==1) ? 'en cours...' : 'terminé';
+
+	// Ferme la connexion
+	mysql_free_result($results);
+	mysql_close($connection);
+
+	$_SESSION['fermentation']['souche'] = $table['idSouche'];
+	$_SESSION['fermentation']['culture'] = $table['idConditionCulture'];
+	$_SESSION['fermentation']['poste'] = $table['idPoste'];
+	$_SESSION['fermentation']['date'] = $table['dateDeclaration'];
+	$_SESSION['fermentation']['statut'] = $table['statut'];
+
+	haut_de_page("Détail d\'une fermentation");
+
+$page = <<<EOF
+<h1><a>Détail de la fermentation numéro $id</a></h1>
+<form id="form_167188" class="appnitro" method="post" action="">
+	<div class="form_description">
+		<h2>Détail de la fermentation numéro <? echo $id; ?></h2>
+		<p>Merci de choisir une action à réaliser pour cette fermentation</p>
+		<p class="error">{$_SESSION['message']}</p>
+	</div>
+	<ul>
+EOF;
+
+	echo $page;
+
+	if ( $_SESSION['fermentation']['statut']==1 ) {
+
+$input=<<<EOF
+		<li>
+			<p>
+				<input id="saveForm" class="button_text" type="submit" name="acquisition" value="Faire une acquisition/prélèvement" />
+				<input id="saveForm" class="button_text" type="submit" name="afficher" value="Afficher les données" />
+				<input id="saveForm" class="button_text" type="submit" name="cloturer" value="Cloturer la fermentation" />
+			</p>
+			<p><input id="saveForm" class="button_text" type="submit" name="retour" value="Retour" /></p>
+		</li>
+EOF;
+
+		echo $input;
+
+	} else {
+
+$input=<<<EOF
+		<li>
+			<p>
+			<input id="saveForm" class="button_text" type="submit" name="afficher" value="Afficher toutes les données" />
+			<input id="saveForm" class="button_text" type="submit" name="exporter" value="Exporter les données" />
+			<input id="saveForm" class="button_text" type="submit" name="retour" value="Retour" />
+			</p>
+		</li>
+EOF;
+
+		echo $input;
+	}
+
+
+$page = <<<EOF
+		<li>
+			<label class="description" for="element_1">Souche:</label>
+				<p>Numéro d'identification: {$table['idSouche']}</p>
+				<p>MTF: {$table['numMTF']}</p>
+				<p>Espèce: {$table['nomScientifique']}</p>
+				<p>Nom: {$table['nomLabo']}</p>
+				<p>Description: {$table['description']}</p>
+		</li>
+
+		<li>
+			<label class="description" for="element_1">Milieu de culture:</label>
+				<p>Numéro d'identification: {$table['idConditionCulture']}</p>
+				<p>Milieu: {$table['milieu']}</p>
+				<p>Volume de milieu: {$table['volume']} L</p>
+				<p>Type de fermenteur: {$table['typeFermenteur']}</p>
+				<p>Température: {$table['temperature']}°C</p>
+				<p>Oxygène: {$table['oxygene']}</p>
+		</li>
+
+		<li>
+			<label class="description" for="element_1">Poste de fermentation:</label>
+				<p>Numéro d'identification: {$table['idPoste']}</p>
+				<p>Nom de l'agitateur: {$table['agitateur']}</p>
+				<p>Vitesse d'agitation: {$table['vitesse']} tours/min</p>
+				<p>Ligne: {$table['ligne']}</p>
+				<p>Colonne: {$table['colonne']}</p>
+				<p>Balance utilisée: {$table['balance']}</p>
+		</li>
+
+		<li>
+			<label class="description" for="element_1">Détails de fermentation:</label>
+				<p>Numéro d'identification: {$table['idFermentation']}</p>
+				<p>Date de déclaration: {$table['dateDeclaration']}</p>
+				<p>Commentaire: {$table['commentaire']}</p>
+				<p>Statut: {$statut}</p>
+		</li>
+
+		<li>
+			<input type="hidden" name="form_id" value="167188" />
+EOF;
+
+	echo $page;
+
+
+	if ( $_SESSION['fermentation']['statut']==1 ) {
+
+$input=<<<EOF
+			<p>
+				<input id="saveForm" class="button_text" type="submit" name="acquisition" value="Faire une acquisition/prélèvement" />
+				<input id="saveForm" class="button_text" type="submit" name="afficher" value="Afficher les données" />
+				<input id="saveForm" class="button_text" type="submit" name="cloturer" value="Cloturer la fermentation" /></p>
+			</p>
+			<p><input id="saveForm" class="button_text" type="submit" name="retour" value="Retour" /></p>
+		</li>
+	</ul>
+</form>
+EOF;
+
+		echo $input;
+
+	} else {
+
+$input=<<<EOF
+			<p>
+				<input id="saveForm" class="button_text" type="submit" name="afficher" value="Afficher toutes les données" />
+				<input id="saveForm" class="button_text" type="submit" name="exporter" value="Exporter les données" />
+				<input id="saveForm" class="button_text" type="submit" name="retour" value="Retour" />
+			</p>
+		</li>
+	</ul>
+</form>
+EOF;
+
+		echo $input;
+	}
+
+
+	bas_de_page();
+
+} else {
+
+	unset($_SESSION['message']);
+	unset($_SESSION['fermentation']);
+	unset($_SESSION['acquisition']);
+	header("Location: ../Accueil/accueil.php");
+	exit;
+}
+
+exit;
+
+?>

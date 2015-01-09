@@ -1,0 +1,288 @@
+<?php
+
+require_once("../fonctions.php");
+require_once("../constantes.php");
+
+session_start();
+
+// Verifie si l'autorisation est ok sinon on redirige sur la page d'authentification
+if ( !$_SESSION['auth']==1 ) {
+	session_destroy();
+	header("Location: ../Identification/identification.php");
+	exit;
+
+
+// Un bouton est appuyé et on traite l'évènememnt
+} elseif ( isset($_POST['retour']) ) {
+		unset($_SESSION['message']);
+		unset($_SESSION['fermentation']);
+		unset($_SESSION['acquisition']);
+		header("Location: ../ListeFerm/listeferm.php");
+		exit;
+
+
+} elseif ( isset($_POST['mesurer']) and isset($_SESSION['fermentation']['idFermentation']) ) {
+
+	$poids = balance();
+
+	if (is_numeric($poids)) {
+
+		haut_de_page("Résultat de la pesée");
+
+
+// Debut du block de formatage
+$page=<<<EOF
+<h1><a>Résultat de la mesure</a></h1>
+<form id="form_167188" class="appnitro" method="post" action="">
+	<div class="form_description">
+		<h2>Résultat de la mesure</h2>
+		<p>Résultat de la mesure pour la fermentation n° {$_SESSION['fermentation']['idFermentation']}</p>
+	</div>
+		<ul >
+			<li>
+				<label class="description">Valider le poids en appuyant sur "Sauvegarder".</label>
+			</li>
+			<li>
+				<label class="description">Poids: $poids g </label>
+			</li>
+			<li class="buttons">
+				<input type="hidden" name="form_id" value="167188" />
+				<button id="sauvegarder" type="submit" name="sauvegarder" value="1" title="Sauvegarder"></button>Sauvegarder
+				<button id="retour" type="submit" name="retour" value="retour" title="Retour"></button>Retour
+			</li>
+		</ul>
+</form>
+EOF;
+// Fin du block de formatage
+
+		echo $page;
+		bas_de_page();
+
+		$_SESSION['acquisition']['poids'] = $poids;
+
+	} else {
+
+		// Valeur de retour n'est pas numérique donc il y a une erreur
+		$_SESSION['message'] = "ERREUR: la balance n'a pas répondu !";
+		header("Location: ".$_SERVER['PHP_SELF']);
+	}
+
+
+} elseif ( isset($_POST['sauvegarder']) and isset($_SESSION['acquisition']['poids']) and isset($_SESSION['fermentation']['idFermentation']) ) {
+
+	$id 	= $_SESSION['fermentation']['idFermentation'];
+	$poids	= $_SESSION['acquisition']['poids'];
+
+	// Ouvre la connexion
+	$connection = mysql_connect(SERVEUR, USER, PASS) or die ("Unable to connect database!");
+
+	// Selectionne la base
+	mysql_select_db(BASE) or die ("Unable to select database!");
+
+	// Construit la requete pour rechercher l'acquisition précédante dans la table Acquisition
+	$query = 	"
+				SELECT 
+					idAcquisition,
+					Prelevement_idPrelevement,
+					Fermentation_idFermentation,
+					dateAcquisition,
+					(UNIX_TIMESTAMP()-UNIX_TIMESTAMP(dateAcquisition)) AS delta,
+					temps, 
+					poids, 
+					mCO2, 
+					vCO2, 
+					volumeRestant
+				FROM Acquisition
+				WHERE Fermentation_idFermentation='$id'
+				ORDER BY dateAcquisition DESC
+				";
+
+	// Execute la requete
+	$results = mysql_query($query) or die ("Error in query: $query\n" . mysql_error());
+	$table = mysql_fetch_assoc($results);
+	mysql_free_result($results);
+
+	if ( !empty($table) ) { // Il existe une acquisition précédante: calcul de cumul de CO2 et de la vitesse
+
+		$delta_temps = $table['delta']/3600; // intervalle de temps entre les 2 mesures (heures)
+		$temps_n = $table['temps']+$delta_temps;
+		$volume_n = $table['volumeRestant']; // le volume de fermenteur ne change pas (en L)
+		$delta_poids = $table['poids'] - $poids; // variation de la masse du fermenteur en g
+		$mCO2_n = $table['mCO2'] + $delta_poids/$volume_n; // calcul du cumul de CO2 en g/L
+		$vCO2_n = ($mCO2_n - $table['mCO2'])/$delta_temps; // calcul de la vitesse en g/L/h
+
+		// Construit la requete
+		$query =	"
+						INSERT INTO Acquisition (
+							Fermentation_idFermentation,
+							temps, 
+							poids, 
+							volumeRestant, 
+							mCO2, 
+							vCO2, 
+							temperature
+						)
+						VALUES (
+							'{$table['Fermentation_idFermentation']}',
+							'$temps_n', 
+							'$poids', 
+							'$volume_n', 
+							'$mCO2_n', 
+							'$vCO2_n', 
+							NULL
+						)
+					";
+
+		// Execute la requete
+		mysql_query($query) or die ("Error in query: $query\n" . mysql_error());
+
+	} else { // C'est la première acquisition pour cette fermentation
+
+		// requete pour obtenir les info sur la fermentation
+		$query = 	"
+					SELECT 
+						F.idFermentation, 
+						F.dateDeclaration, 
+						S.idSouche,
+						C.idConditionCulture, 
+						C.volume, 
+						P.idPoste
+					FROM 
+						Fermentation AS F, 
+						Souche AS S , 
+						ConditionCulture AS C, 
+						Poste AS P 
+					WHERE 
+						F.idFermentation=$id AND 
+						S.idSouche=F.Souche_idSouche AND 
+						C.idConditionCulture=F.ConditionCulture_idConditionCulture AND
+						P.idPoste=F.Poste_idPoste
+					";
+
+		// Execute la requete
+		$resultat = mysql_query($query) or die ("Error in query: $query\n" . mysql_error());
+		$row = mysql_fetch_assoc($resultat);
+		mysql_free_result($resultat);
+
+		$mCO2_n = 0;
+		$temps_n = 0;
+
+		// Requete d'enregistrement de l'acquisition
+		$query =	"
+					INSERT INTO Acquisition (
+						Fermentation_idFermentation,
+						temps, 
+						poids, 
+						volumeRestant, 
+						mCO2, 
+						vCO2, 
+						temperature
+					)
+					VALUES (
+						'{$row['idFermentation']}',
+						'$temps_n', 
+						'$poids', 
+						'{$row['volume']}', 
+						'$mCO2_n', 
+						NULL, 
+						NULL
+					)
+					";
+
+		// Execute la requete
+		mysql_query($query) or die ("Error in query: $query\n" . mysql_error());
+	}
+
+	mysql_close($connection);
+
+	unset($_SESSION['message']);
+	$_SESSION['acquisition']['mCO2'] = number_format($mCO2_n, 2);
+	header("Location: prelevement.php");
+	exit;
+
+
+} elseif ( isset($_SESSION['fermentation']['idFermentation']) ) {  // On arrive sur la page pour la première fois
+
+	$id = $_SESSION['fermentation']['idFermentation'];
+
+	// Ouvre la connexion
+	$connection = mysql_connect(SERVEUR, USER, PASS) or die ("Unable to connect database!");
+	mysql_select_db(BASE) or die ("Unable to select database!");
+
+	// Construit les requetes pour la recherche de la position du fermenteur sur la table Poste
+	$query = 	"
+				SELECT 
+					P.agitateur, 
+					P.ligne, 
+					P.colonne
+				FROM 
+					Fermentation AS F, 
+					Poste AS P
+				WHERE 
+					F.idFermentation='$id' AND 
+					P.idPoste=F.Poste_idPoste
+				";
+
+	// Execute la requete
+	$results = mysql_query($query) or die ("Error in query: $query\n" . mysql_error());
+	$table = mysql_fetch_assoc($results);
+	mysql_free_result($results);
+	mysql_close($connection);
+
+	$agitateur = $table['agitateur'];
+	$ligne = $table['ligne'];
+	$colonne = $table['colonne'];
+
+	$_SESSION['fermentation']['poste']['agitateur'] = $agitateur;
+	$_SESSION['fermentation']['poste']['ligne'] = $ligne;
+	$_SESSION['fermentation']['poste']['colonne'] = $colonne;
+
+	haut_de_page("Acquisition");
+
+$page = <<<EOF
+<h1><a>Réaliser une acquisition</a></h1>
+<form id="form_167188" class="appnitro" method="post" action="">
+	<div class="form_description">
+		<h2>Réaliser une acquisition</h2>
+		<p>Réaliser une acquisition pour la fermentation n° $id</p>
+		<p class="error">{$_SESSION['message']}</p>
+	</div>
+		<ul >
+			<li>Fermentation: <strong>$id</strong></li>
+
+			<li>Agitateur: <strong>$agitateur</strong></li>
+
+			<li>Ligne: <strong>$ligne</strong></li>
+
+			<li>Colonne: <strong>$colonne</strong></li>
+
+			<li></li>
+
+			<li>Déposer le fermenteur sur la balance puis appuyer sur <strong>"Mesurer"</strong></li>
+
+			<li></li>
+
+			<li class="buttons">
+				<input type="hidden" name="form_id" value="167188" />
+				<button id="mesurer" type="submit" name="mesurer" value="1" title="Mesurer"></button>Mesurer
+				<button id="retour" type="submit" name="retour" value="retour" title="Retour"></button>Retour
+			</li>
+		</ul>
+</form>
+EOF;
+
+	echo $page;
+	bas_de_page();
+
+
+} else {
+	unset($_SESSION['message']);
+	unset($_SESSION['fermentation']);
+	unset($_SESSION['acquisition']);
+	header("Location: ../ListeFerm/listeferm.php");
+	exit;
+}
+
+exit;
+
+?>

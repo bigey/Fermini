@@ -1,0 +1,201 @@
+<?php
+
+require_once("../fonctions.php");
+require_once("../constantes.php");
+
+// Defini les variable d'acces au serveur mySQL
+// $host = "localhost";
+// $user = "www-data";
+// $pass = "";  // Pas de mot de passe pour www-data
+// $db   = "Fermentation";
+
+
+// Start session
+session_start();
+
+// Verifie si l'autorisation est ok sinon die avec erreur
+if ( !$_SESSION['auth']==1 ) {
+
+	header("Location: ../Identification/identification.php");
+	exit;
+
+} elseif ( $_POST['retour'] ) {
+
+	unset($_SESSION['message']);
+	unset($_SESSION['fermentation']);
+	header("Location: ../Accueil/accueil.php");
+	exit;
+
+
+} elseif ( $_POST['submit_mtf'] ) {
+
+	// Ouvre la connexion
+	$connection = mysql_connect(SERVEUR, USER, PASS) or die ("Unable to connect to mySQL server !");
+
+	// Selectionne la base
+	mysql_select_db(BASE) or die ("Unable to select database!");
+
+	// Construit la requete pour rechercher si la souche est déja dans la DB
+	$query = "SELECT * FROM Souche WHERE numMTF = '" . $_POST['mtf'] . "'";
+
+	// Execute la requete
+	$result = mysql_query($query) or die ("Error in query: $query. " . mysql_error());
+
+	// La souche existe déja dans la base
+	if (mysql_num_rows($result) >= 1) {
+
+		// si au moins une ligne est retournée,
+		// la souche est déja dans la base
+
+		$record = mysql_fetch_array($result);
+
+		$souche = array(
+					"insert" => 1,
+					"idSouche" => $record['idSouche'],
+				);
+
+		$_SESSION['fermentation']["souche"] = $souche;
+		$_SESSION['message'] = "MTF {$record['numMTF']}: {$record['nomLabo']}";
+
+		// Libere le resultat et ferme la connection
+		mysql_free_result($result);
+		mysql_close($connection);
+
+		// Saut sur la page condition de culture
+		header("Location: ../Declaration/culture.php");
+		exit;
+
+	} else {
+		// Le MTF n'existe pas
+		$_SESSION['message'] = 'Ce numéro MTF est innexistant dans la base de donnée !';
+	}
+
+	// le champ MTF est vide ou
+	// le numéro n'est pas dans la base
+	// donc il faut le formutlaire complet pour toute les informations sur la souche
+
+	haut_de_page("Souche de levure");
+
+$page=<<<EOF
+<h1><a>Souche de levure</a></h1>
+<form id="form_167767" class="appnitro"  method="post" action="" >
+
+	<div class="form_description">
+		<h2>Souche de levure</h2>
+		<p>Données relatives à la souche utilisée pour la fermentation</p>
+		<p class="error">{$_SESSION['message']}</p>
+	</div>
+
+	<ul>
+
+		<li id="li_1" >
+			<label class="description" for="element_3">Numéro MTF </label>
+			<div>
+				<input id="element_1" name="mtf" class="element text small" type="text" maxlength="255" value="{$_POST['mtf']}"/>
+			</div>
+			<p class="guidelines" id="guide_1"><small>Numéro d'enregistrement de la souche dans la collection du laboratoire (MTFxxxx)</small></p>
+		</li>
+
+		<li id="li_3" >
+			<label class="description" for="element_3">Nom scientifique </label>
+			<div>
+				<input id="element_3" name="nom_latin" class="element text medium" type="text" maxlength="255" value="Sacchromyces cerevisiae"/>
+			</div>
+			<p class="guidelines" id="guide_3"><small>ex: Sacchromyces cerevisiae</small></p>
+		</li>
+
+		<li id="li_4" >
+			<label class="description" for="element_2">Nom d'usage </label>
+			<div>
+				<input id="element_2" name="nom" class="element text medium" type="text" maxlength="255" value=""/>
+			</div>
+			<p class="guidelines" id="guide_2"><small>Le nom utilisé pour identifier la souche</small></p>
+		</li>
+
+		<li id="li_5" >
+			<label class="description" for="element_4">Description </label>
+			<div>
+				<textarea id="element_4" name="description" class="element textarea small"></textarea>
+			</div>
+			<p class="guidelines" id="guide_4"><small>Informations disponibles permettant de mieux décrire la souche</small></p>
+		</li>
+
+		<li class="buttons">
+			<input type="hidden" name="form_id" value="167767" />
+			<button id="valider" type="submit" name="submit_details" value="Suivant" title="Suivant"></button>Suivant
+			<button id="retour" type="submit" name="retour" value="retour" title="Retour"></button>Retour
+			<button id="effacer" type="reset" name="effacer" value="1" title="Effacer"></button>Effacer
+		</li>
+	</ul>
+
+</form>
+EOF;
+
+	echo $page;
+	bas_de_page();
+
+} elseif ( $_POST['submit_details'] ) {
+
+	// Sauvez les info dans la variable $_SESSION['fermentation']
+
+	if ( empty($_POST['nom_latin']) or empty($_POST['nom']) ) {
+
+		$_SESSION['message'] = 'ERREUR: des champs indispensables sont vides !';
+		header("Location: ".$_SERVER['PHP_SELF']);
+		exit;
+	}
+
+	$souche = array(
+				"mtf" => $_POST['mtf'],
+				"espece" => $_POST['nom_latin'],
+				"nom" => $_POST['nom'],
+				"description" => $_POST['description']
+			);
+
+	$_SESSION['fermentation']["souche"] = $souche;
+
+	// Saut sur la page condition de culture
+	unset($_SESSION['message']);
+	header("Location: ../Declaration/culture.php");
+	exit;
+
+} else {
+
+	// Affiche le formulaire de saisie du numéro MTF pour la souche
+	haut_de_page("Souche de levure");
+
+$page=<<<EOF
+<h1><a>Souche de levure</a></h1>
+<form id="form_167767" class="appnitro"  method="post" action="" >
+
+	<div class="form_description">
+		<h2>Souche de levure</h2>
+		<p>Données relatives à la souche utilisée pour la fermentation</p>
+	</div>
+
+	<ul>
+		<li id="li_1" >
+			<label class="description" for="element_1">La souche a t-elle un numéro MTF ? </label><br />
+			<label class="description" for="element_1">si oui entrez son numéro </label>
+			<input id="element_1" name="mtf" class="element text small" type="text" maxlength="255" value=""/>
+			<p class="guidelines" id="guide_1"><small>Numéro d'enregistrement de la souche dans la collection du laboratoire (MTFxxxx)</small></p>
+		</li>
+
+		<li class="buttons">
+			<button id="valider" type="submit" name="submit_mtf" value="Suivant" title="Suivant"></button>Suivant
+			<button id="retour" type="submit" name="retour" value="retour" title="Retour"></button>Retour
+		</li>
+	</ul>
+
+</form>
+EOF;
+
+	echo $page;
+	bas_de_page();
+
+}
+
+//echo "fin du script !\n";
+exit;
+
+?>
