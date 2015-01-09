@@ -2,7 +2,7 @@
 
 ## What is Fermini?
 
-Fermini is system for monitoring fermentations.
+Fermini is system for monitoring yeast fermentations.
 
 In 2010, participating in a yeast phenotyping project, I took the initiative to design
 a system to store data obtained from small volume fermentations.
