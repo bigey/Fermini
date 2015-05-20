@@ -23,9 +23,10 @@ Debian/Ubuntu
 * mysql-client
 * phpmyadmin
 
-	$ su -
-	# aptitude install apache2 mysql-server mysql-client phpmyadmin
-	
+~~~
+$ su -
+# aptitude install apache2 mysql-server mysql-client phpmyadmin
+~~~	
 
 Perl modules
 
