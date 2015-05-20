@@ -41,15 +41,18 @@ Download from: https://github.com/bigey/Fermini
 	
 ### Create Fermini database
 
-edit install_fermini.sh
+edit install_fermini.sh:
+
 	cd /var/www/Fermini/Install
 	nano install_fermini.sh
 
 set root MySQL password:
+
 	DB_ROOT_USER='root'
 	DB_ROOT_PASS=<root-mysql-user-password>
 
-create database
+create database:
+
 	/var/www/Fermini/Install/install_fermini.sh
 	adduser www-data dialout
 
@@ -59,6 +62,7 @@ create database
 	cp -a /var/www/Fermini/Install/mysqldump.sh /home/<user>/bin
 
 Create an entry in crontab:
+
 	crontab -e
 	# m h dom mon dow   command
 	0 */2 * * * /home/<user>/bin/run-mysqldump.sh
