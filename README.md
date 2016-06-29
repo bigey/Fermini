@@ -44,10 +44,10 @@ Download from: https://github.com/bigey/Fermini
 	
 ### Create Fermini database
 
-edit install_fermini.sh:
+edit create_fermentation_db.sh:
 
 	# cd /var/www/Fermini/Install
-	# nano install_fermini.sh
+	# nano create_fermentation_db.sh
 
 set root MySQL password:
 
@@ -56,10 +56,13 @@ set root MySQL password:
 
 create database:
 
-	# /var/www/Fermini/Install/install_fermini.sh
-	# adduser www-data dialout
+	# /var/www/Fermini/Install/create_fermentation_db.sh
 
 ### Modify the balance serial communication script
+
+Add user 'www-data' to 'dialout' group:
+
+	# adduser www-data dialout
 
 In the Perl script `/Scripts/balance_ohaus.pl`
 
