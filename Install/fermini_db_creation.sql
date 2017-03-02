@@ -2,9 +2,18 @@ SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;
 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='TRADITIONAL';
 
+-- -----------------------------------------------------
+-- User `www-data`
+-- -----------------------------------------------------
+CREATE USER 'www-data'@'localhost' IDENTIFIED BY 'password';
+
+-- -----------------------------------------------------
+-- Database `Fermini`
+-- -----------------------------------------------------
 DROP SCHEMA IF EXISTS `Fermini` ;
 CREATE SCHEMA IF NOT EXISTS `Fermini` ;
 GRANT SELECT, INSERT, UPDATE ON `Fermini`.* TO 'www-data'@'localhost';
+FLUSH PRIVILEGES;
 
 -- -----------------------------------------------------
 -- Table `Fermini`.`Utilisateur`

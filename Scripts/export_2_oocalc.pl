@@ -16,7 +16,7 @@ my $database='Fermini';
 my $hostname="localhost";
 my $port='';
 my $user="www-data";
-my $password;
+my $password="password";
 my $dsn = "DBI:mysql:database=$database;host=$hostname;port=$port";
 
 # Input parameters

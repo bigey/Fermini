@@ -1,15 +1,15 @@
 #!/bin/bash
 
-## Parametres de connection mysql
+## MySQL connection credentials
 DB_ROOT_USER='root'
 DB_ROOT_PASS=<root-mysql-user-password>
 
-## Script SQL de creation de la DB
+## User and database creation script
 CREATE_FERMENTATION_DB='fermini_db_creation.sql'
 
 rm -f mysql.log
 
-## Creation de la DB Fermentation
+## Running the script under 'root' privileges
 mysql -h localhost \
  --user=$DB_ROOT_USER \
  --password=$DB_ROOT_PASS \

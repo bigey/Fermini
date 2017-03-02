@@ -16,63 +16,116 @@ a system to store data obtained from small volume fermentations.
 
 ## Dependencies
 
-Debian/Ubuntu
+For Debian/Ubuntu:
 
-* apache2
-* mysql-server
-* mysql-client
-* phpmyadmin
-
-~~~
+```
 $ su -
 # aptitude install apache2 mysql-server mysql-client phpmyadmin
-~~~	
+```	
 
-Perl modules
+Install Perl modules from CPAN:
 
-	# cpan -i CPAN::Bundle YAML Term::ReadLine::Perl Device::SerialPort DBI OpenOffice::OODoc
+```bash
+# cpan -i CPAN::Bundle YAML Term::ReadLine::Perl Device::SerialPort DBI OpenOffice::OODoc
+```
 
 ## Install
 
 ### Download project
 
-Download from: https://github.com/bigey/Fermini
+Clone from GitHub:
 
-	# unzip Fermini-master.zip
-	# mkdir /var/www/Fermini
-	# mv -r Fermini-master/* /var/www/Fermini
-	
+```bash
+# cd /var/www
+# clone https://github.com/bigey/Fermini.git
+# cd Fermini
+```
+
+Or download here [](https://github.com/bigey/Fermini/archive/master.zip):
+
+```bash
+# unzip Fermini-master.zip
+# mkdir /var/www/Fermini
+# mv -r Fermini-master/* /var/www/Fermini
+# cd /var/www/Fermini
+```
+
 ### Create Fermini database
 
-edit create_fermentation_db.sh:
+Edit the scrip `create_fermentation_db.sh`:
 
-	# cd /var/www/Fermini/Install
-	# nano create_fermentation_db.sh
+```bash
+# cd /var/www/Fermini/Install
+# nano create_fermentation_db.sh
+```
 
-set root MySQL password:
+Set the password for the `root` MySQL account:
 
-	DB_ROOT_USER='root'
-	DB_ROOT_PASS=<root-mysql-user-password>
+```bash
+DB_ROOT_USER='root'
+DB_ROOT_PASS=<root-mysql-user-password>
+```
 
-create database:
+Edit the scrip `fermini_db_creation.sql`:
 
-	# /var/www/Fermini/Install/create_fermentation_db.sh
+```bash
+# cd /var/www/Install
+# nano fermini_db_creation.sql
+```
+
+Set the password for the `www-data` (apache2) user accessing the `Fermini` database in the line bellow:
+
+```sql
+CREATE USER 'www-data'@'localhost' IDENTIFIED BY 'password';
+```
+
+Then create the database:
+
+```bash
+# /var/www/Fermini/Install/create_fermentation_db.sh
+```
+
+Set the password in `constantes.php`:
+
+```php
+define("USER","www-data");
+define("PASS", "password");
+```
+
+Edit the scrip `export_2_oocalc.pl`:
+
+```bash
+# cd /var/www/Scripts
+# nano export_2_oocalc.pl
+```
+
+Set the password in the line bellow:
+
+```perl
+my $user="www-data";
+my $password="password";
+```
+
 
 ### Modify the balance serial communication script
 
-Add user 'www-data' to 'dialout' group:
+Add user `www-data` to `dialout` group:
 
-	# adduser www-data dialout
+```bash
+# adduser www-data dialout
+```
 
 In the Perl script `/Scripts/balance_ohaus.pl`
 
 Change the serial port accordingly:
 
-	my $device = "/dev/ttyS0";
+```perl
+my $device = "/dev/ttyS0";
+```
 
-In function `initDevice` bellow, change `baudrate, parity, databits, stopbits, handshake` according to your balance model.
+In function `initDevice` bellow, change `baudrate, parity, databits, stopbits, handshake` according to your balance model:
 
-~~~
+```perl
 sub initDevice {
 
 	my $port = shift;
@@ -81,22 +134,22 @@ sub initDevice {
 	$PortObj = Device::SerialPort->new($port) or die "Can't start $port\n";
 
 	# Serial device parameters
-	$PortObj->baudrate(2400);      # 
-	$PortObj->parity("none");      #
-	$PortObj->databits(7);         #  Change serial parameters here!
-	$PortObj->stopbits(1);         #
-	$PortObj->handshake("xoff");   #
+	$PortObj->baudrate(2400);      # \
+	$PortObj->parity("none");      #  |
+	$PortObj->databits(7);         #  |Change parameters here!
+	$PortObj->stopbits(1);         #  |
+	$PortObj->handshake("xoff");   # /
 	$PortObj->write_settings;
 
 	$PortObj->save("Ohaus.conf");
 
 	return $PortObj;
 }
-~~~
+```
 
-In function `parseWeight` bellow, change the parsing regex according to the output format of you balance. 
+In function `parseWeight` bellow, change the parsing regex according to the output format of you balance:
 
-~~~
+```perl
 sub parseWeight {
 
 	my $string = shift;
@@ -110,17 +163,21 @@ sub parseWeight {
 		return(undef);
 	}
 }
-~~~
+```
 
-### Regular backup of database (optional)
+### Set a regular backup of database (optional)
 
-	# mkdir /home/<user>/bin
-	# cp -a /var/www/Fermini/Install/mysqldump.sh /home/<user>/bin
+```bash
+# mkdir /home/<user>/bin
+# cp -a /var/www/Fermini/Install/mysqldump.sh /home/<user>/bin
+```
 
 Create an entry in crontab:
 
-	# crontab -e
-	
-	# m h dom mon dow   command
-	0 */2 * * * /home/<user>/bin/run-mysqldump.sh
-	Ctl+D
+```
+# crontab -e
+
+# m h dom mon dow   command
+0 */2 * * * /home/<user>/bin/run-mysqldump.sh
+Ctl+D
+```

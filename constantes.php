@@ -7,7 +7,7 @@ define("SITE_PATH", '/var/www/Fermini');
 
 // definitions des constantes de connection à la base
 define("USER","www-data");
-define("PASS", "");
+define("PASS", "password");
 define("SERVEUR", "localhost");
 define("BASE", "Fermini");
 
