@@ -37,11 +37,11 @@ Clone from GitHub:
 
 ```bash
 cd /var/www
-clone https://github.com/bigey/Fermini.git
+git clone https://github.com/bigey/Fermini.git
 cd Fermini
 ```
 
-Or download here [](https://github.com/bigey/Fermini/archive/master.zip):
+Or download sources from [GitHub](https://github.com/bigey/Fermini/archive/master.zip):
 
 ```bash
 unzip Fermini-master.zip
@@ -85,7 +85,14 @@ Then create the database:
 bash /var/www/Fermini/Install/create_fermentation_db.sh
 ```
 
-Set the password in `constantes.php`:
+Edit the scrip `constantes.php`:
+
+```
+cd /var/www/Fermini
+nano /var/www/Fermini/constantes.php
+```
+
+Set password in the line bellow:
 
 ```php
 define("USER","www-data");
@@ -107,9 +114,13 @@ my $password="password";
 ```
 
 
-### Modify the balance serial communication script
+### Setup the configuration for your balance
 
-Add user `www-data` to `dialout` group:
+The balance used here is OHAUS model Adventurer Pro AV812C (Max: 810 g, d: 0.01 g),
+which is an entry level balance. You can use any other manufacturers or models 
+supporting a serial communication. 
+
+In order to access the serial port you need to add the user `www-data` to the `dialout` group:
 
 ```bash
 adduser www-data dialout
@@ -117,13 +128,13 @@ adduser www-data dialout
 
 In the Perl script `/Scripts/balance_ohaus.pl`
 
-Change the serial port accordingly:
+Change the serial port accordingly (eg. `/dev/ttS0`, `/dev/ttS1`):
 
 ```perl
 my $device = "/dev/ttyS0";
 ```
 
-In function `initDevice` bellow, change `baudrate, parity, databits, stopbits, handshake` according to your balance model:
+In function `initDevice` bellow, change `baudrate, parity, databits, stopbits, handshake` according to your manufacturer specification:
 
 ```perl
 sub initDevice {
