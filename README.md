@@ -18,15 +18,15 @@ a system to store data obtained from small volume fermentations.
 
 For Debian/Ubuntu:
 
-```
+```bash
 $ su -
-# aptitude install apache2 mysql-server mysql-client phpmyadmin
+aptitude install apache2 mysql-server mysql-client phpmyadmin
 ```	
 
 Install Perl modules from CPAN:
 
 ```bash
-# cpan -i CPAN::Bundle YAML Term::ReadLine::Perl Device::SerialPort DBI OpenOffice::OODoc
+cpan -i CPAN::Bundle YAML Term::ReadLine::Perl Device::SerialPort DBI OpenOffice::OODoc
 ```
 
 ## Install
@@ -36,18 +36,18 @@ Install Perl modules from CPAN:
 Clone from GitHub:
 
 ```bash
-# cd /var/www
-# clone https://github.com/bigey/Fermini.git
-# cd Fermini
+cd /var/www
+clone https://github.com/bigey/Fermini.git
+cd Fermini
 ```
 
 Or download here [](https://github.com/bigey/Fermini/archive/master.zip):
 
 ```bash
-# unzip Fermini-master.zip
-# mkdir /var/www/Fermini
-# mv -r Fermini-master/* /var/www/Fermini
-# cd /var/www/Fermini
+unzip Fermini-master.zip
+mkdir /var/www/Fermini
+mv -r Fermini-master/* /var/www/Fermini
+cd /var/www/Fermini
 ```
 
 ### Create Fermini database
@@ -55,8 +55,8 @@ Or download here [](https://github.com/bigey/Fermini/archive/master.zip):
 Edit the scrip `create_fermentation_db.sh`:
 
 ```bash
-# cd /var/www/Fermini/Install
-# nano create_fermentation_db.sh
+cd /var/www/Fermini/Install
+nano create_fermentation_db.sh
 ```
 
 Set the password for the `root` MySQL account:
@@ -69,8 +69,8 @@ DB_ROOT_PASS=<root-mysql-user-password>
 Edit the scrip `fermini_db_creation.sql`:
 
 ```bash
-# cd /var/www/Install
-# nano fermini_db_creation.sql
+cd /var/www/Install
+nano fermini_db_creation.sql
 ```
 
 Set the password for the `www-data` (apache2) user accessing the `Fermini` database in the line bellow:
@@ -82,7 +82,7 @@ CREATE USER 'www-data'@'localhost' IDENTIFIED BY 'password';
 Then create the database:
 
 ```bash
-# /var/www/Fermini/Install/create_fermentation_db.sh
+bash /var/www/Fermini/Install/create_fermentation_db.sh
 ```
 
 Set the password in `constantes.php`:
@@ -95,8 +95,8 @@ define("PASS", "password");
 Edit the scrip `export_2_oocalc.pl`:
 
 ```bash
-# cd /var/www/Scripts
-# nano export_2_oocalc.pl
+cd /var/www/Scripts
+nano export_2_oocalc.pl
 ```
 
 Set the password in the line bellow:
@@ -112,7 +112,7 @@ my $password="password";
 Add user `www-data` to `dialout` group:
 
 ```bash
-# adduser www-data dialout
+adduser www-data dialout
 ```
 
 In the Perl script `/Scripts/balance_ohaus.pl`
@@ -168,14 +168,14 @@ sub parseWeight {
 ### Set a regular backup of database (optional)
 
 ```bash
-# mkdir /home/<user>/bin
-# cp -a /var/www/Fermini/Install/mysqldump.sh /home/<user>/bin
+mkdir /home/<user>/bin
+cp -a /var/www/Fermini/Install/mysqldump.sh /home/<user>/bin
 ```
 
 Create an entry in crontab:
 
 ```
-# crontab -e
+crontab -e
 
 # m h dom mon dow   command
 0 */2 * * * /home/<user>/bin/run-mysqldump.sh
